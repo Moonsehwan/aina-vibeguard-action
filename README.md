@@ -28,7 +28,7 @@ jobs:
 ```
 
 Add `VIBEGUARD_KEY` to **Settings → Secrets → Actions**.  
-Get a free API key → **[vibeguard.dev](https://vibeguard.dev)**
+Get a free API key → **[github.com/Moonsehwan/aina-vibeguard](https://github.com/Moonsehwan/aina-vibeguard)**
 
 PR fails automatically if security blocks are found.
 
@@ -110,16 +110,16 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
 
 13 security patterns including `COMMAND_INJECTION`, `PATH_TRAVERSAL`, `SQL_INJECTION_RISK`, `INSECURE_RANDOM`, `WEAK_CRYPTO`, `HARDCODED_SECRET`, `EVAL_EXEC_RISK`, and more.
 
-Full pattern list → [aina-vibeguard](https://github.com/shanyshany3528/aina-vibeguard)
+Full pattern list → [aina-vibeguard](https://github.com/Moonsehwan/aina-vibeguard)
 
 ---
 
 ## Pricing
 
-| | Free | Pro | Team |
+| | Free | Pro | Premium |
 |--|------|-----|------|
-| Price | $0 | $9/mo | $29/mo |
-| Scans/day | 20 | 500 | Unlimited |
+| Price | $0 | $19/mo Early Bird | $99/mo Early Bird |
+| Files/day | 50 | Unlimited | Unlimited |
 | Causal attack chains | ❌ | ✅ | ✅ |
 | Project scan | ❌ | ❌ | ✅ |
 
@@ -127,7 +127,7 @@ Full pattern list → [aina-vibeguard](https://github.com/shanyshany3528/aina-vi
 
 ## Contact
 
-- Issues: [github.com/shanyshany3528/aina-vibeguard/issues](https://github.com/shanyshany3528/aina-vibeguard/issues)
+- Issues: [github.com/Moonsehwan/aina-vibeguard/issues](https://github.com/Moonsehwan/aina-vibeguard/issues)
 - Email: Aina.vibeguard@gmail.com
 
 ---
