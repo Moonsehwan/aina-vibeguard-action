@@ -1,5 +1,5 @@
 name: 'VibeGuard Security Scanner'
-description: 'AST-based Python security scanner — 13 vuln types, OWASP Top 10, AINA L3 causal chains. Zero false negatives.'
+description: 'AST-based scanner for AI-generated Python code. 13 vuln types. Never misses a real one.'
 author: 'AINA Sovereign'
 
 branding:
@@ -11,25 +11,22 @@ inputs:
     description: 'VibeGuard API key (get free key at vibeguard.dev)'
     required: true
   scan-path:
-    description: 'File or directory to scan. Defaults to repo root.'
+    description: 'File or directory to scan'
     default: '.'
   fail-on-block:
-    description: 'Fail the workflow (exit 1) when security blocks are found.'
+    description: 'Fail the workflow when security blocks are found'
     default: 'true'
   agent-friendly:
-    description: 'Output JSON+Markdown with before/after code and fix instructions.'
+    description: 'Output JSON+Markdown with before/after code and fix instructions'
     default: 'false'
   max-files:
-    description: 'Maximum number of Python files to scan per run.'
+    description: 'Maximum number of Python files to scan per run'
     default: '200'
 
 outputs:
   blocks:
-    description: 'Total number of BLOCK-severity security issues found.'
+    description: 'Number of BLOCK-severity security issues found (1 = found, 0 = clear)'
     value: ${{ steps.scan.outputs.blocks }}
-  warns:
-    description: 'Total number of WARN-severity issues found.'
-    value: ${{ steps.scan.outputs.warns }}
 
 runs:
   using: 'composite'
@@ -50,7 +47,6 @@ runs:
         FAIL_ON_BLOCK="${{ inputs.fail-on-block }}"
         AGENT_FRIENDLY="${{ inputs.agent-friendly }}"
         MAX_FILES="${{ inputs.max-files }}"
-        TOTAL_BLOCKS=0
         EXIT_CODE=0
 
         echo "::group::VibeGuard — collecting files"
@@ -67,7 +63,7 @@ runs:
             -not -path "*/site-packages/*" \
             | head -"$MAX_FILES")
         fi
-        FILE_COUNT=$(echo "$FILES" | grep -c . || true)
+        FILE_COUNT=$(echo "$FILES" | grep -c . 2>/dev/null || echo 0)
         echo "Files to scan: $FILE_COUNT"
         echo "::endgroup::"
 
@@ -77,20 +73,18 @@ runs:
         fi
 
         for f in $FILES; do
-          echo "::group::$f"
+          echo "::group::Scanning $f"
           aina-vibeguard scan "$f" $EXTRA_FLAGS || EXIT_CODE=1
           echo "::endgroup::"
         done
 
         echo "blocks=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-        echo "warns=0" >> "$GITHUB_OUTPUT"
 
         if [ "$EXIT_CODE" != "0" ]; then
-          echo ""
-          echo "::error::VibeGuard found security blocks. Fix issues before merging."
+          echo "::error::VibeGuard found security blocks. Fix before merging."
           echo "::notice::Run locally: pip install aina-vibeguard && aina-vibeguard scan <file> --agent-friendly"
         else
-          echo "::notice::VibeGuard — all clear. No security blocks found."
+          echo "::notice::VibeGuard — all clear. 0 security blocks."
         fi
 
         if [ "$FAIL_ON_BLOCK" = "true" ] && [ "$EXIT_CODE" != "0" ]; then
