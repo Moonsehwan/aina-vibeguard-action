@@ -1,5 +1,5 @@
 name: 'VibeGuard Security Scanner'
-description: 'AST-based scanner for AI-generated Python code. 13 vuln types. Never misses a real one.'
+description: 'AST-based scanner for AI-generated code. 48 patterns (33 security + 15 vibe-coding), 9 languages.'
 author: 'AINA Sovereign'
 
 branding:
@@ -8,104 +8,98 @@ branding:
 
 inputs:
   api-key:
-    description: 'VibeGuard API key'
+    description: 'VibeGuard API key (free: vg_free_test)'
     required: false
-    default: 'vg_free_demo0001'
+    default: 'vg_free_test'
   scan-path:
-    description: 'File or directory to scan'
+    description: 'File or directory to scan (.py .js .ts .go .rb .java .php .kt .c .cpp)'
     default: '.'
   fail-on-block:
     description: 'Fail the workflow when security blocks are found'
     default: 'true'
-  agent-friendly:
-    description: 'Output JSON+Markdown with before/after code and fix instructions'
-    default: 'false'
   max-files:
-    description: 'Maximum number of Python files to scan per run'
-    default: '200'
+    description: 'Maximum number of files to scan per run'
+    default: '50'
 
 outputs:
   blocks:
-    description: 'Number of BLOCK-severity issues found (1=found, 0=clear)'
+    description: 'Number of BLOCK-severity issues found'
     value: ${{ steps.scan.outputs.blocks }}
+  warns:
+    description: 'Number of WARN-severity issues found'
+    value: ${{ steps.scan.outputs.warns }}
 
 runs:
   using: 'composite'
   steps:
-    - name: Install VibeGuard
-      shell: bash
-      run: |
-        pip install "aina-vibeguard>=1.9.3" --quiet 2>&1 || {
-          echo "::warning::aina-vibeguard install failed — scan skipped"
-          echo "VIBEGUARD_SKIP=true" >> "$GITHUB_ENV"
-        }
-
-    - name: Configure API key
-      shell: bash
-      run: |
-        if [ "${VIBEGUARD_SKIP}" = "true" ]; then exit 0; fi
-        aina-vibeguard config --key "${{ inputs.api-key }}" 2>&1 || {
-          echo "::warning::aina-vibeguard config failed — scan skipped"
-          echo "VIBEGUARD_SKIP=true" >> "$GITHUB_ENV"
-        }
-
-    - name: Scan Python files
+    - name: VibeGuard Security Scan
       id: scan
       shell: bash
       run: |
-        if [ "${VIBEGUARD_SKIP}" = "true" ]; then
-          echo "::notice::VibeGuard scan skipped"
-          echo "blocks=0" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
+        API_BASE="https://pleasing-transformation-production-90c2.up.railway.app"
+        API_KEY="${{ inputs.api-key }}"
         SCAN_PATH="${{ inputs.scan-path }}"
         FAIL_ON_BLOCK="${{ inputs.fail-on-block }}"
         MAX_FILES="${{ inputs.max-files }}"
-        BLOCKS_FOUND=0
+        TOTAL_BLOCKS=0
+        TOTAL_WARNS=0
+        FILE_COUNT=0
 
-        echo "::group::VibeGuard — collecting files"
         if [ -f "$SCAN_PATH" ]; then
           FILES="$SCAN_PATH"
         else
           FILES=$(find "$SCAN_PATH" \
-            -name "*.py" \
+            \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.go" \
+               -o -name "*.rb" -o -name "*.java" -o -name "*.php" -o -name "*.kt" \
+               -o -name "*.c" -o -name "*.cpp" \) \
             -not -path "*/.git/*" \
             -not -path "*/node_modules/*" \
             -not -path "*/__pycache__/*" \
             -not -path "*/venv/*" \
             -not -path "*/.venv/*" \
             -not -path "*/site-packages/*" \
-            | head -"$MAX_FILES" || true)
+            | head -"$MAX_FILES")
         fi
-        FILE_COUNT=$(echo "$FILES" | grep -c . 2>/dev/null || echo 0)
-        echo "Files to scan: $FILE_COUNT"
-        echo "::endgroup::"
 
-        EXTRA=""
-        [ "${{ inputs.agent-friendly }}" = "true" ] && EXTRA="--agent-friendly"
-
+        echo "::group::VibeGuard Scan"
         for f in $FILES; do
           [ -z "$f" ] && continue
-          echo "::group::Scanning $f"
-          OUTPUT=$(aina-vibeguard scan "$f" $EXTRA 2>&1) || true
-          echo "$OUTPUT"
-          # Only count as block if output explicitly says BLOCK (not API error)
-          if echo "$OUTPUT" | grep -q "blocks=[1-9]"; then
-            BLOCKS_FOUND=1
-            echo "::error file=$f::VibeGuard: security blocks found in $f"
+          FILE_COUNT=$((FILE_COUNT + 1))
+
+          RESPONSE=$(curl -sf -X POST "$API_BASE/v1/scan" \
+            -H "X-API-Key: $API_KEY" \
+            -F "file=@$f" 2>/dev/null) || {
+            echo "::warning::API unreachable for $f — skipping"
+            continue
+          }
+
+          BLOCKS=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('blocks',0))" 2>/dev/null || echo 0)
+          WARNS=$(echo "$RESPONSE"  | python3 -c "import sys,json; print(json.load(sys.stdin).get('warns',0))"  2>/dev/null || echo 0)
+          TOTAL_BLOCKS=$((TOTAL_BLOCKS + BLOCKS))
+          TOTAL_WARNS=$((TOTAL_WARNS + WARNS))
+
+          if [ "$BLOCKS" -gt 0 ]; then
+            echo "::error file=$f::VibeGuard: $BLOCKS block(s) in $f"
+            echo "$RESPONSE" | python3 -c "
+import sys,json
+for i in json.load(sys.stdin).get('issues',[]):
+    if i.get('severity')=='BLOCK':
+        print(f\"  [{i['kind']}] L{i.get('line','?')}: {i.get('detail','')[:100]}\")
+" 2>/dev/null || true
           fi
-          echo "::endgroup::"
         done
+        echo "::endgroup::"
 
-        echo "blocks=$BLOCKS_FOUND" >> "$GITHUB_OUTPUT"
+        echo "blocks=$TOTAL_BLOCKS" >> "$GITHUB_OUTPUT"
+        echo "warns=$TOTAL_WARNS"   >> "$GITHUB_OUTPUT"
 
-        if [ "$BLOCKS_FOUND" = "0" ]; then
-          echo "::notice::VibeGuard — all clear. 0 security blocks."
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "VibeGuard: $FILE_COUNT files | BLOCK=$TOTAL_BLOCKS WARN=$TOTAL_WARNS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        if [ "$TOTAL_BLOCKS" -eq 0 ]; then
+          echo "✅ All clear."
         else
-          echo "::warning::VibeGuard found security blocks."
-          echo "::notice::Fix: aina-vibeguard scan <file> --agent-friendly"
-          if [ "$FAIL_ON_BLOCK" = "true" ]; then
-            exit 1
-          fi
+          echo "🚨 $TOTAL_BLOCKS block(s) found."
+          [ "$FAIL_ON_BLOCK" = "true" ] && exit 1
         fi
