@@ -1,19 +1,69 @@
-# VibeGuard Security Scanner — GitHub Action
+# aina-vibeguard-action
 
-[![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-VibeGuard-red?logo=github)](https://github.com/marketplace/actions/vibeguard-security-scanner)
-[![PyPI](https://img.shields.io/pypi/v/aina-vibeguard?label=aina-vibeguard)](https://pypi.org/project/aina-vibeguard/)
+> GitHub Action for [AINAScan VibeGuard](https://github.com/Moonsehwan/aina-scan) — 48-pattern security + vibe-coding scanner for AI-generated code.
 
-**AST-based security scanner for AI-generated Python code.**  
-May flag false positives. Never misses a real one.
+[![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-aina--vibeguard--action-blue)](https://github.com/marketplace/actions/aina-vibeguard-scan)
+[![Patterns](https://img.shields.io/badge/patterns-48-orange)](https://github.com/Moonsehwan/aina-scan)
+[![Languages](https://img.shields.io/badge/languages-9-green)](https://github.com/Moonsehwan/aina-scan)
 
 ---
 
-## Quick Start
+## What It Does
+
+Scans your code on every PR. Blocks merge if security vulnerabilities are found. Zero config.
+
+```
+Pull Request opened
+       ↓
+aina-vibeguard-action
+       ↓
+AST static analysis (deterministic, no LLM)
+       ↓
+48 patterns checked (33 security + 15 vibe-coding)
+       ↓
+PASS → merge allowed
+FAIL → merge blocked (if fail-on-block: true)
+```
+
+---
+
+## 🎉 Free Promo Key
+
+> **`vg_free_test`** — Full Pro features, free until **2026-06-25**. No signup required.
+
+Add it as a GitHub secret and you're ready in 2 minutes.
+
+---
+
+## 🔒 Privacy — Your Code Is Safe
+
+| | What happens |
+|---|---|
+| **Code processing** | In-memory on our server — never written to disk or database |
+| **What we log** | Filename, BLOCK/WARN counts, timestamp only |
+| **Code retention** | **Zero.** Discarded immediately after scan |
+| **Third-party sharing** | Never |
+| **LLM training** | Never |
+
+> Your code is sent to our API for analysis, processed in-memory, and **discarded immediately**. We only return the JSON scan result. You can verify this by reading the [open-source scanner code](https://github.com/Moonsehwan/aina-scan).
+
+**Want zero network transmission?** Use `aina-vibeguard` Python package for fully local scanning — no upload at all.
+
+---
+
+## Quick Setup (2 minutes)
+
+**Step 1 — Add your API key as a GitHub secret:**
+1. Go to your repo → **Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. Name: `VIBEGUARD_KEY`
+4. Value: `vg_free_test`
+
+**Step 2 — Create the workflow file:**
 
 ```yaml
 # .github/workflows/vibeguard.yml
 name: VibeGuard Security Scan
-
 on: [pull_request]
 
 jobs:
@@ -21,82 +71,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: Moonsehwan/aina-vibeguard-action@v1
         with:
           api-key: ${{ secrets.VIBEGUARD_KEY }}
+          fail-on-block: 'true'
 ```
 
-Add `VIBEGUARD_KEY` to **Settings → Secrets → Actions**.  
-Get a free API key → **[github.com/Moonsehwan/aina-vibeguard](https://github.com/Moonsehwan/aina-vibeguard)**
-
-PR fails automatically if security blocks are found.
-
----
-
-## Real Finding
-
-Scanned **serena** (25K ⭐) — AI coding assistant:
-
-```
-CRITICAL  COMMAND_INJECTION  agent.py:1222
-          subprocess.Popen(cmd, shell=True)
-          → any config file can execute arbitrary commands
-```
-
-Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
+Done. Every PR is now protected.
 
 ---
 
 ## Inputs
 
-| Input | Description | Default |
-|-------|-------------|---------|
-| `api-key` | VibeGuard API key (**required**) | — |
-| `scan-path` | File or directory to scan | `.` |
-| `fail-on-block` | Fail PR when blocks found | `true` |
-| `agent-friendly` | JSON+Markdown with before/after code | `false` |
-| `max-files` | Max Python files per run | `200` |
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `api-key` | Yes | — | Your VibeGuard API key. Store as a GitHub secret. |
+| `fail-on-block` | No | `'true'` | Set `'false'` to report without failing the check. |
+| `path` | No | `.` | Directory to scan. Defaults to repo root. |
+| `extensions` | No | `py,js,ts,go,rb,java,php,kt,c,cpp` | Comma-separated file extensions to scan. |
+| `max-files` | No | `100` | Maximum files per scan (Free: 50/day, Pro: unlimited). |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| `blocks` | `1` if security blocks found, `0` if clear |
+| `total-blocks` | Total number of BLOCK-level issues found |
+| `total-warns` | Total number of WARN-level issues found |
+| `files-scanned` | Number of files scanned |
+| `scan-report` | JSON summary of all issues |
 
 ---
 
-## Examples
+## Advanced Configuration
 
-### Block PRs on security issues
-
+**Scan specific directories only:**
 ```yaml
 - uses: Moonsehwan/aina-vibeguard-action@v1
   with:
     api-key: ${{ secrets.VIBEGUARD_KEY }}
+    path: 'src'
+    extensions: 'py,ts'
     fail-on-block: 'true'
 ```
 
-### Agent-friendly output (auto-fix with Claude Code)
-
-```yaml
-- uses: Moonsehwan/aina-vibeguard-action@v1
-  with:
-    api-key: ${{ secrets.VIBEGUARD_KEY }}
-    agent-friendly: 'true'
-```
-
-### Scan specific directory
-
-```yaml
-- uses: Moonsehwan/aina-vibeguard-action@v1
-  with:
-    api-key: ${{ secrets.VIBEGUARD_KEY }}
-    scan-path: 'src/'
-```
-
-### Warning-only mode (non-blocking)
-
+**Report only (no merge block):**
 ```yaml
 - uses: Moonsehwan/aina-vibeguard-action@v1
   with:
@@ -104,43 +122,101 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
     fail-on-block: 'false'
 ```
 
+**Use scan result in next step:**
+```yaml
+- uses: Moonsehwan/aina-vibeguard-action@v1
+  id: vibeguard
+  with:
+    api-key: ${{ secrets.VIBEGUARD_KEY }}
+    fail-on-block: 'false'
+
+- name: Post results as PR comment
+  if: steps.vibeguard.outputs.total-blocks > 0
+  uses: actions/github-script@v6
+  with:
+    script: |
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: `VibeGuard: ${{ steps.vibeguard.outputs.total-blocks }} BLOCK(s) found.`
+      })
+```
+
 ---
 
-## What It Detects
+## Detection Patterns (48 total)
 
-13 security patterns including `COMMAND_INJECTION`, `PATH_TRAVERSAL`, `SQL_INJECTION_RISK`, `INSECURE_RANDOM`, `WEAK_CRYPTO`, `HARDCODED_SECRET`, `EVAL_EXEC_RISK`, and more.
+### Security (33 patterns)
 
+| Category | Examples |
+|----------|---------|
+| Injection | `SQL_INJECTION_RISK`, `COMMAND_INJECTION`, `TEMPLATE_INJECTION` |
+| XSS / Path | `XSS_RISK`, `PATH_TRAVERSAL`, `OPEN_REDIRECT` |
+| Data exposure | `HARDCODED_SECRET`, `SENSITIVE_DATA_EXPOSURE` |
+| Network | `SSRF_RISK`, `UNVALIDATED_REDIRECT` |
+| Crypto | `INSECURE_HASH`, `WEAK_CIPHER` |
+| Execution | `EVAL_EXEC_RISK`, `DESERIALIZATION_RISK` |
+| + 27 more | |
 
+### Vibe-Coding (15 patterns — AI-generated code specific)
 
-### Encoding Corruption — AI Copy-Paste Bug
+These patterns are **unique to AINAScan** — built specifically for code generated by AI assistants.
 
-| Pattern | Severity | Trigger |
-|---------|----------|---------|
-| `ENCODING_CORRUPTION` | 🔴 BLOCK | Smart quotes `""``''`, BOM, Non-breaking space (U+00A0) |
-| `ENCODING_CORRUPTION` | 🟡 WARN | Em dash `—`, en dash `–`, Unicode arrows `→←` in code (OK in comments) |
+| Pattern | What it catches |
+|---------|----------------|
+| `STUB_SKELETON` | `def process(data): return {}` — no logic |
+| `MISSING_WRITE` | `def save_user(...)` with no INSERT/UPDATE |
+| `FAKE_ASYNC` | `async def f():` with no `await` |
+| `DEAD_CALL_RESULT` | Module calls with ignored return values |
+| `HARDCODED_TABLE` | Data hardcoded as dict instead of DB lookup |
+| `INPUT_OUTPUT_DISCONNECTED` | Params don't affect return value |
+| `MOCK_PATTERN` | `unittest.mock` in production code |
+| `ENCODING_CORRUPTION` | Smart quotes / non-breaking spaces from AI Markdown |
+| + 7 more | |
 
-**Why it matters:** AI writes Markdown with smart quotes. Copy-pasted into code = `SyntaxError` on first run. Invisible to all other linters. All 9 languages supported.
+### 9 Languages Supported
 
-Full pattern list → [aina-vibeguard](https://github.com/Moonsehwan/aina-vibeguard)
+Python · JavaScript · TypeScript · Go · Ruby · Java · PHP · Kotlin · C/C++
+
+---
+
+## Example PR Annotation
+
+```
+VibeGuard Security Scan ❌
+
+Found 2 BLOCK-level issues:
+
+  app/routes/users.py:42  SQL_INJECTION_RISK
+  → f-string interpolation in SQL query. Use parameterized queries.
+
+  services/auth.py:18  HARDCODED_SECRET
+  → Hardcoded API key detected. Move to environment variable.
+
+Merge is blocked. Fix the issues above and push again.
+```
 
 ---
 
 ## Pricing
 
-| | Free | Pro | Premium |
+| | Free | Pro | Team |
 |--|------|-----|------|
-| Price | $0 | $19/mo Early Bird | $99/mo Early Bird |
-| Files/day | 50 | Unlimited | Unlimited |
-| Causal attack chains | ❌ | ✅ | ✅ |
-| Project scan | ❌ | ❌ | ✅ |
+| **Price** | $0 | **$19/mo Early Bird** | **$60/mo Early Bird** |
+| **Files/day** | 50 | Unlimited | Unlimited |
+| **All 48 patterns** | ✅ | ✅ | ✅ |
+| **Scan history** | 7 days | 90 days | 1 year |
+| **Priority support** | ❌ | ❌ | ✅ |
+
+> 🎉 **Promo (until 2026-06-25):** Use key `vg_free_test` for full Pro access free. No signup.
+
+Get a key: [aina-scan API](https://github.com/Moonsehwan/aina-scan)
 
 ---
 
-## Contact
+## Related
 
-- Issues: [github.com/Moonsehwan/aina-vibeguard/issues](https://github.com/Moonsehwan/aina-vibeguard/issues)
-- Email: Aina.vibeguard@gmail.com
-
----
-
-MIT License
+- [aina-scan](https://github.com/Moonsehwan/aina-scan) — API docs, curl examples, Python SDK
+- [Issues & Bug Reports](https://github.com/Moonsehwan/aina-vibeguard-action/issues)
+- **Email:** shanyshany3528@gmail.com
