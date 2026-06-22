@@ -110,6 +110,17 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
 
 13 security patterns including `COMMAND_INJECTION`, `PATH_TRAVERSAL`, `SQL_INJECTION_RISK`, `INSECURE_RANDOM`, `WEAK_CRYPTO`, `HARDCODED_SECRET`, `EVAL_EXEC_RISK`, and more.
 
+
+
+### Encoding Corruption — AI Copy-Paste Bug
+
+| Pattern | Severity | Trigger |
+|---------|----------|---------|
+| `ENCODING_CORRUPTION` | 🔴 BLOCK | Smart quotes `""``''`, BOM, Non-breaking space (U+00A0) |
+| `ENCODING_CORRUPTION` | 🟡 WARN | Em dash `—`, en dash `–`, Unicode arrows `→←` in code (OK in comments) |
+
+**Why it matters:** AI writes Markdown with smart quotes. Copy-pasted into code = `SyntaxError` on first run. Invisible to all other linters. All 9 languages supported.
+
 Full pattern list → [aina-vibeguard](https://github.com/Moonsehwan/aina-vibeguard)
 
 ---
