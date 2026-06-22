@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aina/aina-vibeguard-action@v1
+      - uses: Moonsehwan/aina-vibeguard-action@v1
         with:
           api-key: ${{ secrets.VIBEGUARD_KEY }}
 ```
@@ -71,7 +71,7 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
 ### Block PRs on security issues
 
 ```yaml
-- uses: aina/aina-vibeguard-action@v1
+- uses: Moonsehwan/aina-vibeguard-action@v1
   with:
     api-key: ${{ secrets.VIBEGUARD_KEY }}
     fail-on-block: 'true'
@@ -80,7 +80,7 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
 ### Agent-friendly output (auto-fix with Claude Code)
 
 ```yaml
-- uses: aina/aina-vibeguard-action@v1
+- uses: Moonsehwan/aina-vibeguard-action@v1
   with:
     api-key: ${{ secrets.VIBEGUARD_KEY }}
     agent-friendly: 'true'
@@ -89,7 +89,7 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
 ### Scan specific directory
 
 ```yaml
-- uses: aina/aina-vibeguard-action@v1
+- uses: Moonsehwan/aina-vibeguard-action@v1
   with:
     api-key: ${{ secrets.VIBEGUARD_KEY }}
     scan-path: 'src/'
@@ -98,7 +98,7 @@ Found in 3 seconds. Missed by Semgrep. Missed by the maintainers.
 ### Warning-only mode (non-blocking)
 
 ```yaml
-- uses: aina/aina-vibeguard-action@v1
+- uses: Moonsehwan/aina-vibeguard-action@v1
   with:
     api-key: ${{ secrets.VIBEGUARD_KEY }}
     fail-on-block: 'false'
